@@ -27,7 +27,7 @@ ui = shinyUI(
   pageWithSidebar(
     headerPanel("WNBA mins & (eventually) usage matrix")
     ,
-    sidebarPanel(width=3,
+    sidebarPanel(width=2,
                  wellPanel(
                    radioButtons("Teams", label = h3("Team Select"),
                                 choices =(team_abbrevs
