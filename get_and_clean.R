@@ -174,7 +174,7 @@ print(i)
 }
 
 
-write.csv(hold_final_results, file = "new_final_results.csv")
+write.csv(hold_final_results, file = "new_final_results.csv", row.names = FALSE)
 
 
 
