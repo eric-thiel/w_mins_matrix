@@ -126,8 +126,57 @@ games = cbind(games, Home_score)
 games = cbind(games, Away_score)
 
 games[, 1:4] = sapply(games[, 1:4], as.character)
+games$Home_score = as.numeric(games$Home_score)
+games$Away_score = as.numeric(games$Away_score)
 
-games$game_number = rownames(games)
+games$game_number = Sys.Date() - 
+  as.Date(as.character("2020/01/01"), format="%Y/%m/%d")
+
+hold_final_results = c("Player_id", "Names","Minutes","Usage","TeamAbbreviation","game_number","matchup","description")
+hold_final_results = data.frame(hold_final_results)
+t1 <- t(hold_final_results)
+my.names <- t1[1,]
+colnames(t1) <- my.names
+t1 = as.data.frame(t1)
+t1 = t1[0,]
+hold_final_results = t1
+teams = as.data.frame(team_abbrevs)
+for(i in teams$team_abbrevs){
+grab_a_team = subset(joined, TeamAbbreviation == i)
+grab_latest_game = subset(games, games$Away == i | games$Home == i)
+grab_latest_game = tail(grab_latest_game,1)
+grab_latest_game$home_win = ifelse(grab_latest_game$Home_score > grab_latest_game$Away_score,1,0)
+grab_latest_game$description = ifelse(grab_latest_game$Home == i & grab_latest_game$home_win == 1,
+                                      paste("W", grab_latest_game$Home_score," - ",grab_latest_game$Away_score),
+                                      ifelse(grab_latest_game$Home ==i & grab_latest_game$home_win == 0,
+                                      paste("L", grab_latest_game$Home_score, " - ",grab_latest_game$Away_score),
+                                      ifelse(grab_latest_game$Away == i & grab_latest_game$home_win == 1,
+                                             paste("L", grab_latest_game$Away_score, " - ",grab_latest_game$Home_score),
+                                                   ifelse(grab_latest_game$Away == i & grab_latest_game$home_win ==0,
+                                                          paste("W",grab_latest_game$Away_score, " - ", grab_latest_game$Home_score), "oops u messed up"))))
+  
+grab_latest_game$matchup = ifelse(grab_latest_game$Home == i, paste(grab_latest_game$Home, " v ", grab_latest_game$Away),
+                                  paste(grab_latest_game$Away, " v ", grab_latest_game$Home))
+
+matrix_test = grab_a_team %>% select(Player_id,Names, Minutes, Usage, TeamAbbreviation)
+matrix_test = cbind(matrix_test, grab_latest_game$matchup)
+matrix_test = cbind(matrix_test, grab_latest_game$description)
+matrix_test = cbind(matrix_test, grab_latest_game$game_number)
+matrix_test$game_number = matrix_test$`grab_latest_game$game_number`
+matrix_test$`grab_latest_game$game_number` = NULL
+matrix_test$matchup = matrix_test$`grab_latest_game$matchup`
+matrix_test$`grab_latest_game$matchup` = NULL
+matrix_test$description = matrix_test$`grab_latest_game$description`
+matrix_test$`grab_latest_game$description` = NULL
+matrix_test[, 7:8] = sapply(matrix_test[, 7:8], as.character)
+hold_final_results = rbind(hold_final_results, matrix_test)
+print(i)
+}
+
+
+write.csv(hold_final_results, file = "new_final_results.csv")
+
+
 
 
 
