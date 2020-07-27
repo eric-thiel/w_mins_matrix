@@ -31,8 +31,8 @@ library(XML)
 #             "1611661325", "1611661320","1611661319","1611661324",
 #             "1611661313","1611661317","1611661328","1611661322")
 
-# team_abbrevs = c("ATL","CHI","CON","DAL","IND","LAS","LVA","MIN",
-#                 "NYL","PHO","SEA","WAS")
+ team_abbrevs = c("ATL","CHI","CON","DAL","IND","LAS","LVA","MIN",
+                 "NYL","PHO","SEA","WAS")
 
 #get_teams = data.frame(team_ids, team_abbrevs)
 #for i in team_ids{
@@ -107,7 +107,8 @@ joined = left_join(to_this_date, starters[c("Minutes","started","Player_id")], b
 joined = joined %>% rename("Minutes"="Minutes.x","minutes_as_starter"="Minutes.y")
 joined$started = ifelse(is.na(joined$started),0,joined$started)
 joined$minutes_as_starter = ifelse(is.na(joined$minutes_as_starter),0,joined$minutes_as_starter)
-
+joined$game_number = Sys.Date() - 
+  as.Date(as.character("2020/01/01"), format="%Y/%m/%d")
 
 g = jsonlite::fromJSON("https://api.pbpstats.com/get-games/wnba?Season=2020&SeasonType=Regular%2BSeason")
 
@@ -129,10 +130,20 @@ games[, 1:4] = sapply(games[, 1:4], as.character)
 games$Home_score = as.numeric(games$Home_score)
 games$Away_score = as.numeric(games$Away_score)
 
-games$game_number = Sys.Date() - 
-  as.Date(as.character("2020/01/01"), format="%Y/%m/%d")
 
-hold_final_results = c("Player_id", "Names","Minutes","Usage","TeamAbbreviation","game_number","matchup","description")
+#### WIP, tough to visualize without another day of data. Attack after tomorrows games
+# previous_gamelog = vroom::vroom("https://raw.githubusercontent.com/eric-thiel/w_mins_matrix/master/new_final_results.csv")
+
+# last = previous_gamelog %>% select(Player_id, Names, Minutes, Usage, TeamAbbreviation, started, game_number)
+# to_compare_to = joined %>% select(Player_id, Names, Minutes, Usage, TeamAbbreviation, started, game_number)
+# to_compare_to = subset(to_compare_to, to_compare_to$game_number != last$game_number) ## this is useless, will never come true. 
+
+## essentially we want to subtract the total from the previous. Likely need to summarise the previous gamelog by player and then left join that 
+  ## to "to_compare_to" subtract "new" minutes from "old minutes" that are stored in gamelog. 
+
+
+
+hold_final_results = c("Player_id", "Names","Minutes","Usage","TeamAbbreviation","started","game_number","matchup","description")
 hold_final_results = data.frame(hold_final_results)
 t1 <- t(hold_final_results)
 my.names <- t1[1,]
@@ -158,23 +169,20 @@ grab_latest_game$description = ifelse(grab_latest_game$Home == i & grab_latest_g
 grab_latest_game$matchup = ifelse(grab_latest_game$Home == i, paste(grab_latest_game$Home, " v ", grab_latest_game$Away),
                                   paste(grab_latest_game$Away, " v ", grab_latest_game$Home))
 
-matrix_test = grab_a_team %>% select(Player_id,Names, Minutes, Usage, TeamAbbreviation)
+matrix_test = grab_a_team %>% select(Player_id,Names, Minutes, Usage, TeamAbbreviation, started, game_number)
 matrix_test = cbind(matrix_test, grab_latest_game$matchup)
 matrix_test = cbind(matrix_test, grab_latest_game$description)
-matrix_test = cbind(matrix_test, grab_latest_game$game_number)
-matrix_test$game_number = matrix_test$`grab_latest_game$game_number`
-matrix_test$`grab_latest_game$game_number` = NULL
 matrix_test$matchup = matrix_test$`grab_latest_game$matchup`
 matrix_test$`grab_latest_game$matchup` = NULL
 matrix_test$description = matrix_test$`grab_latest_game$description`
 matrix_test$`grab_latest_game$description` = NULL
-matrix_test[, 7:8] = sapply(matrix_test[, 7:8], as.character)
+matrix_test[, 8:9] = sapply(matrix_test[, 8:9], as.character)
 hold_final_results = rbind(hold_final_results, matrix_test)
 print(i)
 }
 
 
-write.csv(hold_final_results, file = "new_final_results.csv", row.names = FALSE)
+# write.csv(hold_final_results, file = "new_final_results.csv", row.names = FALSE)
 
 
 
