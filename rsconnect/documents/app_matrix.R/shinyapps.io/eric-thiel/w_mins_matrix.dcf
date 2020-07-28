@@ -1,0 +1,13 @@
+name: w_mins_matrix
+title: w_mins_matrix
+username:
+account: eric-thiel
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2618079
+bundleId: 3443283
+url: https://eric-thiel.shinyapps.io/w_mins_matrix/
+when: 1595889291.87786
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: ~new_final_results.csv|get_and_clean.R|new_final_results.csv|README.md
