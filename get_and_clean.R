@@ -108,21 +108,19 @@ previous_gamelog$GamesPlayed = 1 ## comment these out eventually. Fixing shit
 hold_previous_gamelog$GamesPlayed = 1 ## comment these out eventually. Fixing shit lol
 
 
-wnba_helper <- read_csv("~/Downloads/wnba_helper - Sheet1.csv")
-
-starters = left_join(starters, wnba_helper[c("First_game_start_mins","Name")], by = c("Names"="Name"))
-
-
+#wnba_helper <- read_csv("~/Downloads/wnba_helper - Sheet1.csv")
+#starters = left_join(starters, wnba_helper[c("First_game_start_mins","Name")], by = c("Names"="Name"))
 ### ideally here we are comparing the "starter" minutes in the previous gamelog to the current ones. to determine who the starters for the last game were
 
-starters$started = ifelse(starters$Minutes - starters$First_game_start_mins == 0, 0,1)
 
 summarised_prev = previous_gamelog %>% group_by(Player_id,Names)%>%
-  summarise(sum_mins = sum(Minutes), sum_usage = sum(Usage), sum_starts = sum(started), sum_games = sum(GamesPlayed))
+  summarise(sum_mins = sum(Minutes), sum_usage = sum(Usage), sum_starts = sum(started), sum_games = sum(GamesPlayed), sum_start_mins = sum(minutes_as_starter))
 
-starters = left_join(starters, summarised_prev[c("sum_starts","Player_id")], by = c("Player_id"="Player_id"))
-starters$newest_start = starters$started + starters$sum_starts
-starters$new_minutes_for_starters = starters$Minutes - starters$First_game_start_mins
+
+#starters$started = ifelse(starters$Minutes - starters$First_game_start_mins == 0, 0,1)
+starters = left_join(starters, summarised_prev[c("sum_start_mins","Player_id", "sum_starts")], by = c("Player_id"="Player_id"))
+starters$newest_start = ifelse(starters$sum_start_mins == starters$sum_start_mins, 0, 1) + starters$sum_starts
+starters$new_minutes_for_starters = starters$Minutes - starters$sum_start_mins
 
 
 joined = left_join(to_this_date, starters[c("new_minutes_for_starters","newest_start","Player_id")], by = c("Player_id"="Player_id"))
@@ -150,19 +148,24 @@ Home = g[["results"]][["HomeTeamAbbreviation"]]
 Away = g[["results"]][["AwayTeamAbbreviation"]]
 Home_score = g[["results"]][["HomePoints"]]
 Away_score = g[["results"]][["AwayPoints"]]
+Date = g[["results"]][["Date"]]
 
 Home = as.data.frame(Home)
 Away = as.data.frame(Away)
 Home_score = as.data.frame(Home_score)
 Away_score = as.data.frame(Away_score)
+Date = as.data.frame(Date)
 
 games = cbind(Home, Away)
 games = cbind(games, Home_score)
 games = cbind(games, Away_score)
+games = cbind(games, Date)
 
-games[, 1:4] = sapply(games[, 1:4], as.character)
+games[, 1:5] = sapply(games[, 1:5], as.character)
 games$Home_score = as.numeric(games$Home_score)
 games$Away_score = as.numeric(games$Away_score)
+games$Date = as.Date(games$Date, format = "%Y-%m-%d")
+games = games %>% arrange(Date)
 
 
 #### WIP, tough to visualize without another day of data. Attack after tomorrows games
@@ -219,13 +222,8 @@ print(i)
 }
 
 
-hold_previous_gamelog = left_join(hold_previous_gamelog, wnba_helper[c("First_game_start_mins","Name")], by = c("Names"="Name"))
-hold_previous_gamelog$GamesPlayed = NULL
-hold_previous_gamelog$First_game_start_mins = ifelse(is.na(hold_previous_gamelog$First_game_start_mins),0, hold_previous_gamelog$First_game_start_mins)
-hold_previous_gamelog = hold_previous_gamelog %>% rename("minutes_as_starter"="First_game_start_mins")
 
 hold_final_results = rbind(hold_final_results, hold_previous_gamelog)
-
 
 write.csv(hold_final_results, file = "new_final_results.csv", row.names = FALSE)
 
