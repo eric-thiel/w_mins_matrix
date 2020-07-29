@@ -225,6 +225,12 @@ print(i)
 
 hold_final_results = rbind(hold_final_results, hold_previous_gamelog)
 
+
+#### sparks
+### seattle
+### washington
+
+
 write.csv(hold_final_results, file = "new_final_results.csv", row.names = FALSE)
 
 
