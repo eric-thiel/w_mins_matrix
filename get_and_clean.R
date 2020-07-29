@@ -5,6 +5,7 @@ library(rvest)
 library(xml2)
 library("rvest")
 library(XML)
+library(readr)
 
 ## use this first one to get starters. Then get total mins / stats.
 ## get games from pbpstats/games, append starters and mins (usage?) to each game.
@@ -70,6 +71,7 @@ Names = g[["multi_row_table_data"]][["Name"]]
 Minutes = g[["multi_row_table_data"]][["Minutes"]]
 Usage = g[["multi_row_table_data"]][["Usage"]]
 TeamAbbreviation = g[["multi_row_table_data"]][["TeamAbbreviation"]]
+GamesPlayed = g[["multi_row_table_data"]][["GamesPlayed"]]
 
 
 Player_id = as.data.frame(Player_id)
@@ -77,11 +79,13 @@ Names = as.data.frame(Names)
 Minutes = as.data.frame(Minutes)
 Usage = as.data.frame(Usage)
 TeamAbbreviation = as.data.frame(TeamAbbreviation)
+GamesPlayed = as.data.frame(Games_Played)
 
 to_this_date = cbind(Player_id, Names)
 to_this_date = cbind(to_this_date, Minutes)
 to_this_date = cbind(to_this_date, Usage)
 to_this_date = cbind(to_this_date, TeamAbbreviation)
+to_this_date = cbind(to_this_date, GamesPlayed)
 to_this_date$Player_id = as.character(to_this_date$Player_id)
 to_this_date$Names  = as.character(to_this_date$Names)
 to_this_date$TeamAbbreviation  = as.character(to_this_date$TeamAbbreviation)
@@ -91,22 +95,52 @@ to_this_date$Minutes = as.numeric(to_this_date$Minutes)
 to_this_date$Usage = as.character(to_this_date$Usage)
 to_this_date$Usage = as.numeric(to_this_date$Usage)
 to_this_date$Usage = ifelse(is.na(to_this_date$Usage),0,to_this_date$Usage)
-
+to_this_date$GamesPlayed = as.character(to_this_date$GamesPlayed)
+to_this_date$GamesPlayed = as.numeric(to_this_date$GamesPlayed)
 
 ### here is where I am going to have to subtract the previous days totals to get single game totals.
 ### total - running count == new statistics
 
 
+previous_gamelog = vroom::vroom("https://raw.githubusercontent.com/eric-thiel/w_mins_matrix/master/new_final_results.csv")
+hold_previous_gamelog = vroom::vroom("https://raw.githubusercontent.com/eric-thiel/w_mins_matrix/master/new_final_results.csv")
+previous_gamelog$GamesPlayed = 1 ## comment these out eventually. Fixing shit
+hold_previous_gamelog$GamesPlayed = 1 ## comment these out eventually. Fixing shit lol
 
 
+wnba_helper <- read_csv("~/Downloads/wnba_helper - Sheet1.csv")
+
+starters = left_join(starters, wnba_helper[c("First_game_start_mins","Name")], by = c("Names"="Name"))
 
 
-joined = left_join(to_this_date, starters[c("Minutes","started","Player_id")], by = c("Player_id"="Player_id"))
-## minutes as starter doesn't really matter
+### ideally here we are comparing the "starter" minutes in the previous gamelog to the current ones. to determine who the starters for the last game were
 
-joined = joined %>% rename("Minutes"="Minutes.x","minutes_as_starter"="Minutes.y")
-joined$started = ifelse(is.na(joined$started),0,joined$started)
-joined$minutes_as_starter = ifelse(is.na(joined$minutes_as_starter),0,joined$minutes_as_starter)
+starters$started = ifelse(starters$Minutes - starters$First_game_start_mins == 0, 0,1)
+
+summarised_prev = previous_gamelog %>% group_by(Player_id,Names)%>%
+  summarise(sum_mins = sum(Minutes), sum_usage = sum(Usage), sum_starts = sum(started), sum_games = sum(GamesPlayed))
+
+starters = left_join(starters, summarised_prev[c("sum_starts","Player_id")], by = c("Player_id"="Player_id"))
+starters$newest_start = starters$started + starters$sum_starts
+starters$new_minutes_for_starters = starters$Minutes - starters$First_game_start_mins
+
+
+joined = left_join(to_this_date, starters[c("new_minutes_for_starters","newest_start","Player_id")], by = c("Player_id"="Player_id"))
+
+joined = left_join(joined, summarised_prev[c("sum_mins","sum_usage","sum_starts","sum_games","Player_id")], by = c("Player_id"="Player_id"))
+joined[is.na(joined)] = 0
+
+joined$newest_game = joined$GamesPlayed - joined$sum_games
+joined = subset(joined, newest_game == 1)
+
+joined$Minutes_new = joined$Minutes - joined$sum_mins
+joined$started_new = joined$newest_start - joined$sum_starts
+joined$Usage_new = (joined$GamesPlayed * joined$Usage) - (joined$sum_games * joined$sum_usage)
+joined$minutes_as_starter_new = joined$new_minutes_for_starters
+
+
+## minutes as starter doesn't really matter WRONG 
+
 joined$game_number = Sys.Date() - 
   as.Date(as.character("2020/01/01"), format="%Y/%m/%d")
 
@@ -141,9 +175,11 @@ games$Away_score = as.numeric(games$Away_score)
 ## essentially we want to subtract the total from the previous. Likely need to summarise the previous gamelog by player and then left join that 
   ## to "to_compare_to" subtract "new" minutes from "old minutes" that are stored in gamelog. 
 
+joined = joined %>% select(Player_id,Names, Minutes_new, Usage_new, TeamAbbreviation, started_new, game_number, minutes_as_starter_new)
+joined = joined %>% rename("Minutes"="Minutes_new", "Usage"="Usage_new", "started"="started_new", "minutes_as_starter"="minutes_as_starter_new")
 
 
-hold_final_results = c("Player_id", "Names","Minutes","Usage","TeamAbbreviation","started","game_number","matchup","description")
+hold_final_results = c("Player_id", "Names","Minutes","Usage","TeamAbbreviation","started","game_number","minutes_as_starter","matchup","description")
 hold_final_results = data.frame(hold_final_results)
 t1 <- t(hold_final_results)
 my.names <- t1[1,]
@@ -151,8 +187,9 @@ colnames(t1) <- my.names
 t1 = as.data.frame(t1)
 t1 = t1[0,]
 hold_final_results = t1
-teams = as.data.frame(team_abbrevs)
-for(i in teams$team_abbrevs){
+teams = unique(joined$TeamAbbreviation)
+teams = as.data.frame(teams)
+for(i in teams$teams){
 grab_a_team = subset(joined, TeamAbbreviation == i)
 grab_latest_game = subset(games, games$Away == i | games$Home == i)
 grab_latest_game = tail(grab_latest_game,1)
@@ -169,7 +206,7 @@ grab_latest_game$description = ifelse(grab_latest_game$Home == i & grab_latest_g
 grab_latest_game$matchup = ifelse(grab_latest_game$Home == i, paste(grab_latest_game$Home, " v ", grab_latest_game$Away),
                                   paste(grab_latest_game$Away, " v ", grab_latest_game$Home))
 
-matrix_test = grab_a_team %>% select(Player_id,Names, Minutes, Usage, TeamAbbreviation, started, game_number)
+matrix_test = grab_a_team %>% select(Player_id,Names, Minutes, Usage, TeamAbbreviation, started, game_number, minutes_as_starter)
 matrix_test = cbind(matrix_test, grab_latest_game$matchup)
 matrix_test = cbind(matrix_test, grab_latest_game$description)
 matrix_test$matchup = matrix_test$`grab_latest_game$matchup`
@@ -182,7 +219,15 @@ print(i)
 }
 
 
-# write.csv(hold_final_results, file = "new_final_results.csv", row.names = FALSE)
+hold_previous_gamelog = left_join(hold_previous_gamelog, wnba_helper[c("First_game_start_mins","Name")], by = c("Names"="Name"))
+hold_previous_gamelog$GamesPlayed = NULL
+hold_previous_gamelog$First_game_start_mins = ifelse(is.na(hold_previous_gamelog$First_game_start_mins),0, hold_previous_gamelog$First_game_start_mins)
+hold_previous_gamelog = hold_previous_gamelog %>% rename("minutes_as_starter"="First_game_start_mins")
+
+hold_final_results = rbind(hold_final_results, hold_previous_gamelog)
+
+
+write.csv(hold_final_results, file = "new_final_results.csv", row.names = FALSE)
 
 
 
