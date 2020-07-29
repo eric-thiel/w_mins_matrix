@@ -49,21 +49,26 @@ server = shinyServer(
     
     df = get_gamelog_data()
 
-    
     output$mytable = DT::renderDataTable({   
       df = subset(df, df$TeamAbbreviation == input$Teams)
 
-      j = df %>% select(Names, started, matchup, description)
-
+      j = df %>% select(Names, started, matchup, description, game_number)
+    
       reference_df = j %>%
         spread(Names, started)
+      reference_df = reference_df %>% arrange(game_number)
+      reference_df$game_number = NULL
       
-      j = df %>% select(Names, Minutes, matchup, description)
+      j = df %>% select(Names, Minutes, matchup, description, game_number)
 
       df_data = j %>%
         spread(Names, Minutes)
+      df_data = df_data %>% arrange(game_number)
+      df_data$game_number = NULL
+      
       
       joinerino = cbind(df_data, reference_df)
+ 
       
       datatable(joinerino)
       
