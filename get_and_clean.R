@@ -119,7 +119,7 @@ summarised_prev = previous_gamelog %>% group_by(Player_id,Names)%>%
 
 #starters$started = ifelse(starters$Minutes - starters$First_game_start_mins == 0, 0,1)
 starters = left_join(starters, summarised_prev[c("sum_start_mins","Player_id", "sum_starts")], by = c("Player_id"="Player_id"))
-starters$newest_start = ifelse(starters$sum_start_mins == starters$sum_start_mins, 0, 1) + starters$sum_starts
+starters$newest_start = ifelse(starters$sum_start_mins == starters$Minutes, 0, 1) + starters$sum_starts
 starters$new_minutes_for_starters = starters$Minutes - starters$sum_start_mins
 
 
@@ -222,7 +222,7 @@ print(i)
 }
 
 
-
+hold_previous_gamelog$GamesPlayed = NULL
 hold_final_results = rbind(hold_final_results, hold_previous_gamelog)
 
 
