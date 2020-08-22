@@ -1,4 +1,5 @@
 "Player_id","Names","Minutes","Usage","TeamAbbreviation","started","game_number","minutes_as_starter","matchup","description"
+<<<<<<< HEAD
 1629481,"Arike Ogunbowale",41,-407187408.614389,"DAL",1,234,"10","DAL  v  WAS","W 101  -  92"
 203866,"Kayla Thornton",39,-90927355.0430794,"DAL",1,234,"10","DAL  v  WAS","W 101  -  92"
 1628277,"Allisha Gray",37,-154709542.803109,"DAL",1,234,"10","DAL  v  WAS","W 101  -  92"
@@ -55,6 +56,8 @@
 203437,"Tierra Ruffin-Pratt",20,-43826.3782823258,"LAS",0,234,"0","LAS  v  ATL","W 93  -  85"
 1628895,"Marie Gülich",4,-475.385548244091,"LAS",0,234,"0","LAS  v  ATL","W 93  -  85"
 1629485,"Kristine Anigwe",4,-62330.2184633257,"LAS",0,234,"0","LAS  v  ATL","W 93  -  85"
+=======
+>>>>>>> 06480c908c5b154a2bb5211804b4aea250471e3c
 203826,"Alyssa Thomas",26,-264647301.872016,"CON",1,233,"7","CON  v  LVA","L 78  -  99"
 201886,"DeWanna Bonner",26,-571991407.49582,"CON",1,233,"7","CON  v  LVA","L 78  -  99"
 202662,"Jasmine Thomas",25,-266258511.465672,"CON",1,233,"7","CON  v  LVA","L 78  -  99"
