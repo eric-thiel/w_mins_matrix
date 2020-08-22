@@ -7,6 +7,10 @@ library("rvest")
 library(XML)
 library(readr)
 
+#x = read_csv("https://raw.githubusercontent.com/eric-thiel/w_mins_matrix/master/new_final_results.csv")
+#x = subset(x, !is.na(x$Player_id))
+#x = subset(x, !is.na(x$Names))
+
 ## use this first one to get starters. Then get total mins / stats.
 ## get games from pbpstats/games, append starters and mins (usage?) to each game.
 ## will have to keep cumulative update as all we have are totals. run every morning.
