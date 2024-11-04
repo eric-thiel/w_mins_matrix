@@ -11,7 +11,7 @@ library(tidyverse)
 
 get_gamelog_data = function()
 {
-  df = vroom::vroom("https://raw.githubusercontent.com/eric-thiel/w_mins_matrix/master/new_final_results.csv")
+  df = vroom::vroom("https://raw.githubusercontent.com/eric-thiel/w_mins_matrix/refs/heads/master/NBA_final_results.csv")
   return(df)
 }
 
@@ -21,18 +21,23 @@ header.true <- function(df) {
   df[-1,]
 }
 
-team_abbrevs = c("ATL","CHI","CON","DAL","IND","LAS","LVA","MIN",
-                 "NYL","PHO","SEA","WAS")
+q = get_gamelog_data()
+
+Encoding(q$Team) <- "UTF-8"
+q$Team = iconv(q$Team, "UTF-8", "UTF-8",sub='') ## replace any non UTF-8 by ''
+team_abbrevs <- sort(unique(q$Team), decreasing = FALSE)
+
+#team_abbrevs = c("ATL","CHI","CON","DAL","IND","LAS","LVA","MIN",
+#                 "NYL","PHO","SEA","WAS")
 ui = shinyUI(
   pageWithSidebar(
     headerPanel("WNBA mins & (eventually) usage matrix")
     ,
     sidebarPanel(width=2,
                  wellPanel(
-                   radioButtons("Teams", label = h3("Team Select"),
-                                choices =(team_abbrevs
-                                ), 
-                                selected = "ATL"),
+                   selectInput("Teams", label = h3("Team Select"),
+                               choices =(team_abbrevs), 
+                               hr(), ),
                  )
     )
     ,
@@ -50,21 +55,38 @@ server = shinyServer(
     df = get_gamelog_data()
 
     output$mytable = DT::renderDataTable({   
-      df = subset(df, df$TeamAbbreviation == input$Teams)
-
-      j = df %>% select(Names, started, matchup, description, game_number)
-    
-      reference_df = j %>%
-        spread(Names, started)
-      reference_df = reference_df %>% arrange(game_number)
-      reference_df$game_number = NULL
+      df = subset(df, df$Team == input$Teams)
+      df$minutes = round(df$minutes, 1)
       
-      j = df %>% select(Names, Minutes, matchup, description, game_number)
+      j = df %>% select(Name, minutes, matchup, description, Date)
 
       df_data = j %>%
-        spread(Names, Minutes)
-      df_data = df_data %>% arrange(game_number)
-      df_data$game_number = NULL
+        spread(Name, minutes)
+      
+      holder = df_data %>% dplyr::select(matchup, description, Date)
+      excluded_vars = c("matchup","description","Date")
+      holder123 = select(df_data, -one_of(excluded_vars))
+      holder2 <- holder123[,names(sort(colSums(holder123, na.rm = TRUE), decreasing = TRUE))]
+      
+      df_data = cbind(holder, holder2)
+      
+      df_data = df_data %>% arrange(Date)
+      df_data$Date = NULL
+      
+      j = df %>% select(Name, is_starter, matchup, description, Date)
+      
+      reference_df = j %>%
+        spread(Name, is_starter)
+      holder_asdf = reference_df %>% dplyr::select(matchup, description, Date)
+      excluded_vars = c("matchup","description","Date")
+      holder_new = select(reference_df, -one_of(excluded_vars))
+      holder_new <- holder_new[,names(sort(colSums(holder123, na.rm = TRUE), decreasing = TRUE))]
+      reference_df = cbind(holder_asdf, holder_new)
+      
+      
+      reference_df = reference_df %>% arrange(Date)
+      reference_df$Date = NULL
+      
       
       
       joinerino = cbind(df_data, reference_df)
